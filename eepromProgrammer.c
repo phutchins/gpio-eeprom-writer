@@ -134,6 +134,7 @@ void pulseLatch() {
   bcm2835_gpio_set_pud(SHIFT_LATCH, BCM2835_GPIO_PUD_DOWN);
   sleep(1);
   bcm2835_gpio_set_pud(SHIFT_LATCH, BCM2835_GPIO_PUD_UP);
+  clearPin(SHIFT_LATCH);
   sleep(1);
   bcm2835_gpio_set_pud(SHIFT_LATCH, BCM2835_GPIO_PUD_DOWN);
   sleep(1);
@@ -149,9 +150,12 @@ void pushBits(char * bits) {
   while (bits[i]) {
     switch (bits[i]) {
       case '0':
+        i++;
         printf("Bit is 0\n");
-        setPinOff(SHIFT_DATA);
+        //setPinOff(SHIFT_DATA);
+        clearPin(SHIFT_DATA);
       case '1':
+        i++;
         printf("Bit is 1\n");
         setPinUp(SHIFT_DATA);
     }
@@ -159,8 +163,6 @@ void pushBits(char * bits) {
     sleep(1);
 
     pulseClock();
-
-    i++;
   }
 
   return;
@@ -220,6 +222,10 @@ main() {
 
   // Init the BCM module
   if (!bcm2835_init()) return 1;
+
+  printf("SHIFT_DATA pin: %i\n", SHIFT_DATA);
+  printf("SHIFT_CLK pin: %i\n", SHIFT_CLK);
+  printf("SHIFT_LATCH pin: %i\n", SHIFT_LATCH);
 
   // Set GPIO mode to set
   initPinSet(SHIFT_DATA);
