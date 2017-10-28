@@ -79,37 +79,41 @@ const char * hexToBin(char * hexString) {
 }
 
 void setPinUp(int pinNum) {
-  bcm2835_gpio_set_pud(pinNum, BCM2835_GPIO_PUD_UP);
+  //bcm2835_gpio_set_pud(pinNum, BCM2835_GPIO_PUD_UP);
+  bcm2835_gpio_fsel(pinNum, BCM2835_GPIO_FSEL_OUTP);
+  bcm2835_gpio_write(pinNum, HIGH);
+  //bcm2835_gpio_set(pinNum);
 
   return;
 }
 
 void setPinDown(int pinNum) {
-  bcm2835_gpio_set_pud(pinNum, BCM2835_GPIO_PUD_DOWN);
+  //bcm2835_gpio_set_pud(pinNum, BCM2835_GPIO_PUD_DOWN);
+  bcm2835_gpio_fsel(pinNum, BCM2835_GPIO_FSEL_OUTP);
+  bcm2835_gpio_write(pinNum, LOW);
+  //bcm2835_gpio_set(pinNum);
 
   return;
 }
 
 void setPinOff(int pinNum) {
   bcm2835_gpio_set_pud(pinNum, BCM2835_GPIO_PUD_OFF);
+  bcm2835_gpio_fsel(pinNum, BCM2835_GPIO_FSEL_OUTP);
+  bcm2835_gpio_set(pinNum);
 
   return;
 }
 
 void clearPin(int pinNum) {
+  bcm2835_gpio_set_pud(pinNum, BCM2835_GPIO_PUD_OFF);
   bcm2835_gpio_fsel(pinNum, BCM2835_GPIO_FSEL_OUTP);
   bcm2835_gpio_clr(pinNum);
 }
 
 void initPinSet(int pinNum) {
   printf("Initializing pin number %i\n", pinNum);
-  sleep(1);
   bcm2835_gpio_fsel(pinNum, BCM2835_GPIO_FSEL_OUTP);
-  //bcm2835_gpio_set_pud(pinNum, BCM2835_GPIO_PUD_OFF);
   bcm2835_gpio_set(pinNum);
-  //setPinOff(pinNum);
-  sleep(1);
-  clearPin(pinNum);
 
   return;
 }
@@ -117,13 +121,9 @@ void initPinSet(int pinNum) {
 // Clock pulse is up, down up or up, off, up ?
 void pulseClock() {
   // Pulse the clock to shift the data one bit 
-  bcm2835_gpio_set_pud(SHIFT_CLK, BCM2835_GPIO_PUD_UP);
-  sleep(1);
   clearPin(SHIFT_CLK);
-  //bcm2835_gpio_set_pud(SHIFT_CLK, BCM2835_GPIO_PUD_OFF);
-  sleep(1);
-  bcm2835_gpio_set_pud(SHIFT_CLK, BCM2835_GPIO_PUD_UP);
-  sleep(1);
+  setPinUp(SHIFT_CLK);
+  clearPin(SHIFT_CLK);
 
   return;
 }
@@ -131,13 +131,9 @@ void pulseClock() {
 // Latch pulse is DOWN, UP, DOWN?
 void pulseLatch() {
   // Pulse the latch
-  bcm2835_gpio_set_pud(SHIFT_LATCH, BCM2835_GPIO_PUD_DOWN);
-  sleep(1);
-  bcm2835_gpio_set_pud(SHIFT_LATCH, BCM2835_GPIO_PUD_UP);
   clearPin(SHIFT_LATCH);
-  sleep(1);
-  bcm2835_gpio_set_pud(SHIFT_LATCH, BCM2835_GPIO_PUD_DOWN);
-  sleep(1);
+  setPinUp(SHIFT_LATCH);
+  clearPin(SHIFT_LATCH);
 
   return;
 }
@@ -145,21 +141,27 @@ void pulseLatch() {
 // Load bits into the shift register
 void pushBits(char * bits) {
   long int i = 0;
+  printf("Bit 0 is %c\n", bits[0]);
   printf("Pushing bits %s\n", bits);
 
+  sleep(1);
+
   while (bits[i]) {
-    switch (bits[i]) {
-      case '0':
-        i++;
-        printf("Bit is 0\n");
-        //setPinOff(SHIFT_DATA);
-        clearPin(SHIFT_DATA);
-      case '1':
-        i++;
+    printf("Looping bit %c\n", bits[i]);
+    printf("Size of bits is %i\n", sizeof(bits));
+
+    if (bits[i] == '0') {
+      printf("Bit is 0\n");
+      //clearPin(SHIFT_DATA);
+      setPinDown(SHIFT_DATA);
+    }
+
+    if (bits[i] == '1') {
         printf("Bit is 1\n");
         setPinUp(SHIFT_DATA);
     }
 
+    i++;
     sleep(1);
 
     pulseClock();
@@ -228,19 +230,17 @@ main() {
   printf("SHIFT_LATCH pin: %i\n", SHIFT_LATCH);
 
   // Set GPIO mode to set
-  initPinSet(SHIFT_DATA);
-  initPinSet(SHIFT_CLK);
-  initPinSet(SHIFT_LATCH);
+  //initPinSet(SHIFT_DATA);
+  //initPinSet(SHIFT_CLK);
+  //initPinSet(SHIFT_LATCH);
 
   pushBits("01010101");
   //pushBits("11111111");
 
   pulseLatch();
 
-  sleep(5);
-
   // Reset everything back to default
-  gpio_reset();
+  //gpio_reset();
 
   bcm2835_close();
   printf("... done!\n");
