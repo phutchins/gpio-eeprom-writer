@@ -141,15 +141,11 @@ void pulseLatch() {
 // Load bits into the shift register
 void pushBits(char * bits) {
   long int i = 0;
-  printf("Bit 0 is %c\n", bits[0]);
   printf("Pushing bits %s\n", bits);
 
   sleep(1);
 
   while (bits[i]) {
-    printf("Looping bit %c\n", bits[i]);
-    printf("Size of bits is %i\n", sizeof(bits));
-
     if (bits[i] == '0') {
       printf("Bit is 0\n");
       //clearPin(SHIFT_DATA);
@@ -162,7 +158,6 @@ void pushBits(char * bits) {
     }
 
     i++;
-    sleep(1);
 
     pulseClock();
   }
