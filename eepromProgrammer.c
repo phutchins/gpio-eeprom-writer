@@ -13,13 +13,14 @@
 #define SHIFT_LATCH RPI_V2_GPIO_P1_15
 
 #define MAX 1000
-
  
 // Convert HEX to Binary
-const char * hexToBin(char * hexString) {
+int hexToBin(char* hexString, char* binString) {
   printf("Got hex string: %s\n", hexString);
 
   char binarynum[MAX], hexa[MAX];
+
+  // This is a global and should be made into char * then use strdup at the end?
   char binstr[MAX];
   long int i = 0;
  
@@ -71,11 +72,13 @@ const char * hexToBin(char * hexString) {
         strcat(binstr, "1111"); break;
       default:
         printf("\n Invalid hexa digit %c ", hexString[i]);
-          return 0;
+          return;
     }
     i++;
   }
-  return *binstr;
+  printf("String we're strduping is %s\n", binstr);
+  binString = binstr;
+  printf("String we coppied is %s\n", binString);
 }
 
 void setPinUp(int pinNum) {
@@ -118,7 +121,7 @@ void initPinSet(int pinNum) {
   return;
 }
 
-// Clock pulse is up, down up or up, off, up ?
+// Clock pulse is LOW -> HIGH -> LOW
 void pulseClock() {
   // Pulse the clock to shift the data one bit 
   clearPin(SHIFT_CLK);
@@ -128,7 +131,7 @@ void pulseClock() {
   return;
 }
 
-// Latch pulse is DOWN, UP, DOWN?
+// Latch pulse is LOW -> HIGH -> LOW
 void pulseLatch() {
   // Pulse the latch
   clearPin(SHIFT_LATCH);
@@ -142,8 +145,6 @@ void pulseLatch() {
 void pushBits(char * bits) {
   long int i = 0;
   printf("Pushing bits %s\n", bits);
-
-  sleep(1);
 
   while (bits[i]) {
     if (bits[i] == '0') {
@@ -163,6 +164,22 @@ void pushBits(char * bits) {
   }
 
   return;
+}
+
+int shiftOutHex(char * hexData) {
+  printf("bleh1");
+  char* binString;
+  if (!hexToBin(hexData, binString)) {
+    printf("Error converting hex to binary\n");
+    return 1;
+  }; 
+
+  printf("bleh2");
+  //printf("Converted %c to binary as %c, pushing bits...", hexData, binString);
+
+  pushBits(binString);
+
+  return 0;
 }
 
 void gpio_reset(void) {
@@ -208,12 +225,7 @@ main() {
   // When done...
   // Bring SHIFT_LATCH LOW then HIGH then LOW
 
-  // Use this to iterate through hex values 0-255
-  //char hexString[MAX] = "55";
-  //char binString[MAX];
-  //const char* binString = hexToBin(hexString);
-  //printf("Binary string is: %s\n", binString);
-  //pushBits(binString);
+  char* binString;
 
   printf("Init BCM...\n");
 
@@ -225,13 +237,13 @@ main() {
   printf("SHIFT_LATCH pin: %i\n", SHIFT_LATCH);
 
   // Set GPIO mode to set
-  //initPinSet(SHIFT_DATA);
-  //initPinSet(SHIFT_CLK);
-  //initPinSet(SHIFT_LATCH);
+  // initPinSet(SHIFT_DATA);
+  // initPinSet(SHIFT_CLK);
+  // initPinSet(SHIFT_LATCH);
 
-  pushBits("01010101");
-  //pushBits("11111111");
-
+  hexToBin("55", binString);
+  printf("now sending %s to pushBits", binString);
+  pushBits(binString);
   pulseLatch();
 
   // Reset everything back to default
