@@ -239,8 +239,13 @@ int main() {
   // initPinSet(SHIFT_CLK);
   // initPinSet(SHIFT_LATCH);
 
-  shiftOutHex("0x55");
-  pulseLatch();
+  for (int i = 0; i < 255; i++) {
+    char hex[5];
+    sprintf(hex, "%x", i);
+
+    shiftOutHex(hex);
+    pulseLatch();
+  }
 
   // Reset everything back to default
   //gpio_reset();
