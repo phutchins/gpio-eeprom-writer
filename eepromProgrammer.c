@@ -73,7 +73,7 @@ int hexToBin(char* hexString, char** binString) {
         strcat(binstr, "1111"); break;
       default:
         printf("\n Invalid hexa digit %c ", hexString[i]);
-          return;
+          return 0;
     }
     i++;
   }
@@ -84,7 +84,7 @@ int hexToBin(char* hexString, char** binString) {
 
   printf("String we coppied is %s\n", *binString);
 
-  return;
+  return 1;
 }
 
 void setPinUp(int pinNum) {
@@ -180,8 +180,7 @@ int shiftOutHex(char * hexData) {
     return 1;
   }; 
 
-  printf("bleh2");
-  //printf("Converted %c to binary as %c, pushing bits...", hexData, binString);
+  printf("Converted %s to binary as %s, pushing bits...\n", hexData, binString);
 
   pushBits(binString);
 
@@ -247,9 +246,11 @@ main() {
   // initPinSet(SHIFT_CLK);
   // initPinSet(SHIFT_LATCH);
 
-  hexToBin("55", &binString);
-  printf("now sending %s to pushBits\n", binString);
-  pushBits(binString);
+  //hexToBin("55", &binString);
+  //printf("now sending %s to pushBits\n", binString);
+  //pushBits(binString);
+
+  shiftOutHex("55");
   pulseLatch();
 
   // Reset everything back to default
