@@ -16,15 +16,15 @@
  
 // Convert HEX to Binary
 int hexToBin(char* hexString, char** binString) {
-  printf("Got hex string: %s\n", hexString);
-
-  char binarynum[MAX], hexa[MAX];
-
-  // This is a global and should be made into char * then use strdup at the end?
-  char binstr[MAX];
-  //char* binstr = NULL;
+  char binarynum[MAX];
+  char hexa[MAX];
+  char binstr[MAX] = "";
   long int i = 0;
- 
+
+  if (hexString[0] == '0' && hexString[1] == 'x') {
+    i = 2;
+  }
+
   while (hexString[i]) {
     switch (hexString[i]) {
       case '0':
@@ -78,11 +78,7 @@ int hexToBin(char* hexString, char** binString) {
     i++;
   }
 
-  printf("String we're strduping is %s\n", binstr);
-
   *binString = binstr;
-
-  printf("String we coppied is %s\n", *binString);
 
   return 1;
 }
@@ -154,13 +150,10 @@ void pushBits(char * bits) {
 
   while (bits[i]) {
     if (bits[i] == '0') {
-      printf("Bit is 0\n");
-      //clearPin(SHIFT_DATA);
       setPinDown(SHIFT_DATA);
     }
 
     if (bits[i] == '1') {
-        printf("Bit is 1\n");
         setPinUp(SHIFT_DATA);
     }
 
@@ -223,7 +216,7 @@ void gpio_reset(void) {
   bcm2835_gpio_fsel(RPI_V2_GPIO_P1_22, BCM2835_GPIO_FSEL_INPT);
 }
 
-main() {
+int main() {
   // Set each bit on SHIFT_DATA
   // Then pulse SHIFT_CLK
   // Repeat for each bit
@@ -246,18 +239,16 @@ main() {
   // initPinSet(SHIFT_CLK);
   // initPinSet(SHIFT_LATCH);
 
-  //hexToBin("55", &binString);
-  //printf("now sending %s to pushBits\n", binString);
-  //pushBits(binString);
-
-  shiftOutHex("55");
+  shiftOutHex("0x55");
   pulseLatch();
 
   // Reset everything back to default
   //gpio_reset();
 
   bcm2835_close();
+
   printf("... done!\n");
+
   return 0;
 }
 
