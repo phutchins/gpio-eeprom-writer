@@ -15,13 +15,14 @@
 #define MAX 1000
  
 // Convert HEX to Binary
-int hexToBin(char* hexString, char* binString) {
+int hexToBin(char* hexString, char** binString) {
   printf("Got hex string: %s\n", hexString);
 
   char binarynum[MAX], hexa[MAX];
 
   // This is a global and should be made into char * then use strdup at the end?
   char binstr[MAX];
+  //char* binstr = NULL;
   long int i = 0;
  
   while (hexString[i]) {
@@ -76,9 +77,14 @@ int hexToBin(char* hexString, char* binString) {
     }
     i++;
   }
+
   printf("String we're strduping is %s\n", binstr);
-  binString = binstr;
-  printf("String we coppied is %s\n", binString);
+
+  *binString = binstr;
+
+  printf("String we coppied is %s\n", *binString);
+
+  return;
 }
 
 void setPinUp(int pinNum) {
@@ -167,9 +173,9 @@ void pushBits(char * bits) {
 }
 
 int shiftOutHex(char * hexData) {
-  printf("bleh1");
-  char* binString;
-  if (!hexToBin(hexData, binString)) {
+  char* binString = NULL;
+
+  if (!hexToBin(hexData, &binString)) {
     printf("Error converting hex to binary\n");
     return 1;
   }; 
@@ -225,7 +231,7 @@ main() {
   // When done...
   // Bring SHIFT_LATCH LOW then HIGH then LOW
 
-  char* binString;
+  char* binString = NULL;
 
   printf("Init BCM...\n");
 
@@ -241,8 +247,8 @@ main() {
   // initPinSet(SHIFT_CLK);
   // initPinSet(SHIFT_LATCH);
 
-  hexToBin("55", binString);
-  printf("now sending %s to pushBits", binString);
+  hexToBin("55", &binString);
+  printf("now sending %s to pushBits\n", binString);
   pushBits(binString);
   pulseLatch();
 
