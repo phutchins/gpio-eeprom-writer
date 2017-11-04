@@ -3,14 +3,17 @@
 #include <bcm2835.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
-// Header 11 - GPIO0 - SHIFT_CLK
-// Header 13 - GPIO2 - SHIFT_DATA
-// Header 15 - GPIO3 - SHIFT_LATCH
+// Header 11 - GPIO17 - SHIFT_CLK
+// Header 13 - GPIO27 - SHIFT_DATA
+// Header 15 - GPIO22 - SHIFT_LATCH
+// Header 16 - GPIO23 - EEPROM_WRITE_ENABLE 
 
 #define SHIFT_CLK RPI_V2_GPIO_P1_11
 #define SHIFT_DATA RPI_V2_GPIO_P1_13
 #define SHIFT_LATCH RPI_V2_GPIO_P1_15
+#define EEPROM_WRITE_ENABLE RPI_V2_GPIO_P1_16
 
 #define MAX 1000
  
@@ -83,27 +86,24 @@ int hexToBin(char* hexString, char** binString) {
   return 1;
 }
 
-void setPinUp(int pinNum) {
-  //bcm2835_gpio_set_pud(pinNum, BCM2835_GPIO_PUD_UP);
+void initPinOutUp(int pinNum) {
   bcm2835_gpio_fsel(pinNum, BCM2835_GPIO_FSEL_OUTP);
   bcm2835_gpio_write(pinNum, HIGH);
-  //bcm2835_gpio_set(pinNum);
+  return;
+}
 
+void setPinUp(int pinNum) {
+  bcm2835_gpio_write(pinNum, HIGH);
   return;
 }
 
 void setPinDown(int pinNum) {
-  //bcm2835_gpio_set_pud(pinNum, BCM2835_GPIO_PUD_DOWN);
-  bcm2835_gpio_fsel(pinNum, BCM2835_GPIO_FSEL_OUTP);
   bcm2835_gpio_write(pinNum, LOW);
-  //bcm2835_gpio_set(pinNum);
-
   return;
 }
 
 void setPinOff(int pinNum) {
   bcm2835_gpio_set_pud(pinNum, BCM2835_GPIO_PUD_OFF);
-  bcm2835_gpio_fsel(pinNum, BCM2835_GPIO_FSEL_OUTP);
   bcm2835_gpio_set(pinNum);
 
   return;
@@ -111,7 +111,7 @@ void setPinOff(int pinNum) {
 
 void clearPin(int pinNum) {
   bcm2835_gpio_set_pud(pinNum, BCM2835_GPIO_PUD_OFF);
-  bcm2835_gpio_fsel(pinNum, BCM2835_GPIO_FSEL_OUTP);
+  //bcm2835_gpio_fsel(pinNum, BCM2835_GPIO_FSEL_OUTP);
   bcm2835_gpio_clr(pinNum);
 }
 
@@ -139,6 +139,15 @@ void pulseLatch() {
   clearPin(SHIFT_LATCH);
   setPinUp(SHIFT_LATCH);
   clearPin(SHIFT_LATCH);
+
+  return;
+}
+
+void pulseWrite() {
+  clearPin(EEPROM_WRITE_ENABLE);
+  setPinUp(EEPROM_WRITE_ENABLE);
+  bcm2835_delay(200);
+  clearPin(EEPROM_WRITE_ENABLE);
 
   return;
 }
@@ -235,17 +244,27 @@ int main() {
   printf("SHIFT_LATCH pin: %i\n", SHIFT_LATCH);
 
   // Set GPIO mode to set
-  // initPinSet(SHIFT_DATA);
-  // initPinSet(SHIFT_CLK);
-  // initPinSet(SHIFT_LATCH);
+  initPinOutUp(SHIFT_DATA);
+  initPinOutUp(SHIFT_CLK);
+  initPinOutUp(SHIFT_LATCH);
+  initPinOutUp(EEPROM_WRITE_ENABLE);
 
-  for (int i = 0; i < 255; i++) {
-    char hex[5];
-    sprintf(hex, "%x", i);
+  //byte data[] = { 0x7e, 0x30, 0x6d, 0x79, 0x33, 0x5b, 0x5f, 0x70, 0x7f, 0x7b, 0x77, 0x1f, 0x4e, 0x3d, 0x4f, 0x47 };
 
-    shiftOutHex(hex);
-    pulseLatch();
-  }
+  pushBits("00000000000");
+  pulseLatch();
+  pulseWrite();
+  sleep(1);
+
+  //for (int i = 0; i < 255; i++) {
+  //  char hex[5];
+  //  sprintf(hex, "%x", i);
+  //
+  //  shiftOutHex(hex);
+  //  pulseLatch();
+  //  pulseWrite();
+  //  sleep(1);
+  //}
 
   // Reset everything back to default
   //gpio_reset();
