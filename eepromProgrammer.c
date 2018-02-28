@@ -7,13 +7,25 @@
 
 // Header 11 - GPIO17 - SHIFT_CLK
 // Header 13 - GPIO27 - SHIFT_DATA
-// Header 15 - GPIO22 - SHIFT_LATCH
+// Header 15 - GPIO22 - SHIFT_LATCH (Chip WE - Write Enable) (should be pulse low, with OE High (manually jumped), and CE low)
+// Output Enable (Chip Pin 20) (needs to be low for write)
+// Chip Enable (Chip Pin 18) (needs to be tied low for write)
 // Header 16 - GPIO23 - EEPROM_WRITE_ENABLE 
 
 #define SHIFT_CLK RPI_V2_GPIO_P1_11
 #define SHIFT_DATA RPI_V2_GPIO_P1_13
 #define SHIFT_LATCH RPI_V2_GPIO_P1_15
+//#define EEPROM_WRITE_ENABLE RPI_V2_GPIO_P1_16
 #define EEPROM_WRITE_ENABLE RPI_V2_GPIO_P1_16
+
+#define EEPROM_DATA_IO_0 RPI_V2_GPIO_P1_37
+#define EEPROM_DATA_IO_1 RPI_V2_GPIO_P1_35
+#define EEPROM_DATA_IO_2 RPI_V2_GPIO_P1_33
+#define EEPROM_DATA_IO_3 RPI_V2_GPIO_P1_31
+#define EEPROM_DATA_IO_4 RPI_V2_GPIO_P1_29
+#define EEPROM_DATA_IO_5 RPI_V2_GPIO_P1_23
+#define EEPROM_DATA_IO_6 RPI_V2_GPIO_P1_21
+#define EEPROM_DATA_IO_7 RPI_V2_GPIO_P1_19
 
 #define MAX 1000
  
@@ -92,12 +104,19 @@ void initPinOutUp(int pinNum) {
   return;
 }
 
+void initPinOutOff(int pinNum) {
+  bcm2835_gpio_fsel(pinNum, BCM2835_GPIO_FSEL_OUTP);
+  bcm2835_gpio_set_pud(pinNum, BCM2835_GPIO_PUD_OFF);
+  bcm2835_gpio_set(pinNum);
+  return;
+}
+
 void setPinUp(int pinNum) {
   bcm2835_gpio_write(pinNum, HIGH);
   return;
 }
 
-void setPinDown(int pinNum) {
+void setPinLow(int pinNum) {
   bcm2835_gpio_write(pinNum, LOW);
   return;
 }
@@ -136,39 +155,102 @@ void pulseClock() {
 // Latch pulse is LOW -> HIGH -> LOW
 void pulseLatch() {
   // Pulse the latch
+  // Pulse HIGH
   clearPin(SHIFT_LATCH);
   setPinUp(SHIFT_LATCH);
   clearPin(SHIFT_LATCH);
+
+  // Pulse LOW
+  //setPinUp(SHIFT_LATCH);
+  //clearPin(SHIFT_LATCH);
+  //setPinUp(SHIFT_LATCH);
 
   return;
 }
 
 void pulseWrite() {
-  clearPin(EEPROM_WRITE_ENABLE);
   setPinUp(EEPROM_WRITE_ENABLE);
-  bcm2835_delay(200);
-  clearPin(EEPROM_WRITE_ENABLE);
+  printf("Write Enable set to OFF, set Trigger now!\n");
+  sleep(15); 
+  //clearPin(EEPROM_WRITE_ENABLE);
+  //sleep(1); 
+  printf("Setting Write Enable to LOW...\n");
+  setPinLow(EEPROM_WRITE_ENABLE);
+  sleep(15); 
+  printf("Stop 3\n");
+  //clearPin(EEPROM_WRITE_ENABLE);
+  setPinUp(EEPROM_WRITE_ENABLE);
+  //sleep(5);
 
   return;
 }
 
 // Load bits into the shift register
-void pushBits(char * bits) {
+void pushAddrBits(char * bits) {
   long int i = 0;
   printf("Pushing bits %s\n", bits);
 
   while (bits[i]) {
     if (bits[i] == '0') {
-      setPinDown(SHIFT_DATA);
+      setPinLow(SHIFT_DATA);
+      printf("Writing 0 to serial pin\n");
     }
 
     if (bits[i] == '1') {
-        setPinUp(SHIFT_DATA);
+      setPinUp(SHIFT_DATA);
+      printf("Writing 1 to serial pin\n");
     }
 
     i++;
 
+    printf("Pulsing clock\n");
     pulseClock();
+  }
+
+  return;
+}
+
+void pushDataBits(char * bits) {
+  if (bits[0] == '0') {
+    setPinLow(EEPROM_DATA_IO_0);
+  } else {
+    setPinUp(EEPROM_DATA_IO_0);
+  }
+
+  if (bits[1] == '0') {
+    setPinLow(EEPROM_DATA_IO_1);
+  } else {
+    setPinUp(EEPROM_DATA_IO_1);
+  }
+
+  if (bits[2] == '0') {
+    setPinLow(EEPROM_DATA_IO_2);
+  } else {
+    setPinUp(EEPROM_DATA_IO_2);
+  }
+
+  if (bits[3] == '0') {
+    setPinLow(EEPROM_DATA_IO_3);
+  } else {
+    setPinUp(EEPROM_DATA_IO_3);
+  }
+
+  if (bits[4] == '0') {
+    setPinLow(EEPROM_DATA_IO_4);
+  } else {
+    setPinUp(EEPROM_DATA_IO_4);
+  }
+
+  if (bits[5] == '0') {
+    setPinLow(EEPROM_DATA_IO_5);
+  } else {
+    setPinUp(EEPROM_DATA_IO_5);
+  }
+
+  if (bits[6] == '0') {
+    setPinLow(EEPROM_DATA_IO_6);
+  } else {
+    setPinUp(EEPROM_DATA_IO_6);
   }
 
   return;
@@ -184,7 +266,7 @@ int shiftOutHex(char * hexData) {
 
   printf("Converted %s to binary as %s, pushing bits...\n", hexData, binString);
 
-  pushBits(binString);
+  pushAddrBits(binString);
 
   return 0;
 }
@@ -248,13 +330,31 @@ int main() {
   initPinOutUp(SHIFT_CLK);
   initPinOutUp(SHIFT_LATCH);
   initPinOutUp(EEPROM_WRITE_ENABLE);
+  setPinUp(EEPROM_WRITE_ENABLE);
 
   //byte data[] = { 0x7e, 0x30, 0x6d, 0x79, 0x33, 0x5b, 0x5f, 0x70, 0x7f, 0x7b, 0x77, 0x1f, 0x4e, 0x3d, 0x4f, 0x47 };
+  //shiftOutHex(data[0]);
 
-  pushBits("00000000000");
+  pushAddrBits("00000000001");
   pulseLatch();
+
+  setPinOff(EEPROM_DATA_IO_0);
+  setPinOff(EEPROM_DATA_IO_1);
+  setPinOff(EEPROM_DATA_IO_2);
+  setPinOff(EEPROM_DATA_IO_3);
+  setPinOff(EEPROM_DATA_IO_4);
+  setPinOff(EEPROM_DATA_IO_5);
+  setPinOff(EEPROM_DATA_IO_6);
+
+  setPinUp(EEPROM_DATA_IO_0);
+  setPinUp(EEPROM_DATA_IO_1);
+  setPinLow(EEPROM_DATA_IO_2);
+  setPinUp(EEPROM_DATA_IO_3);
+  setPinUp(EEPROM_DATA_IO_4);
+  setPinUp(EEPROM_DATA_IO_5);
+  setPinLow(EEPROM_DATA_IO_6);
+
   pulseWrite();
-  sleep(1);
 
   //for (int i = 0; i < 255; i++) {
   //  char hex[5];
@@ -268,6 +368,14 @@ int main() {
 
   // Reset everything back to default
   //gpio_reset();
+
+  setPinOff(EEPROM_DATA_IO_0);
+  setPinOff(EEPROM_DATA_IO_1);
+  setPinOff(EEPROM_DATA_IO_2);
+  setPinOff(EEPROM_DATA_IO_3);
+  setPinOff(EEPROM_DATA_IO_4);
+  setPinOff(EEPROM_DATA_IO_5);
+  setPinOff(EEPROM_DATA_IO_6);
 
   bcm2835_close();
 
