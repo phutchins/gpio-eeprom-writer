@@ -41,6 +41,8 @@ int hexToBin(char* hexString, char** binString) {
   }
 
   while (hexString[i]) {
+    //printf("Parsing hex digit %c \n", hexString[i]);
+
     switch (hexString[i]) {
       case '0':
         strcat(binstr, "0000"); break;
@@ -87,7 +89,7 @@ int hexToBin(char* hexString, char** binString) {
       case 'f':
         strcat(binstr, "1111"); break;
       default:
-        printf("\n Invalid hexa digit %c ", hexString[i]);
+        printf("\n Invalid hexa digit %c \n", hexString[i]);
           return 0;
     }
     i++;
@@ -98,9 +100,22 @@ int hexToBin(char* hexString, char** binString) {
   return 1;
 }
 
+void HexToBinary(int *bits, unsigned int hex) {
+  int r;
+  for (r = 0; r < 32; ++r) {
+    bits[r] = (hex >> r) & 1;
+  }
+}
+
 void initPinOutUp(int pinNum) {
   bcm2835_gpio_fsel(pinNum, BCM2835_GPIO_FSEL_OUTP);
   bcm2835_gpio_write(pinNum, HIGH);
+  return;
+}
+
+void initPinOutLow(int pinNum) {
+  bcm2835_gpio_fsel(pinNum, BCM2835_GPIO_FSEL_OUTP);
+  bcm2835_gpio_write(pinNum, LOW);
   return;
 }
 
@@ -170,17 +185,10 @@ void pulseLatch() {
 
 void pulseWrite() {
   setPinUp(EEPROM_WRITE_ENABLE);
-  printf("Write Enable set to OFF, set Trigger now!\n");
-  sleep(15); 
-  //clearPin(EEPROM_WRITE_ENABLE);
   //sleep(1); 
-  printf("Setting Write Enable to LOW...\n");
   setPinLow(EEPROM_WRITE_ENABLE);
-  sleep(15); 
-  printf("Stop 3\n");
-  //clearPin(EEPROM_WRITE_ENABLE);
+  //sleep(1); 
   setPinUp(EEPROM_WRITE_ENABLE);
-  //sleep(5);
 
   return;
 }
@@ -193,17 +201,17 @@ void pushAddrBits(char * bits) {
   while (bits[i]) {
     if (bits[i] == '0') {
       setPinLow(SHIFT_DATA);
-      printf("Writing 0 to serial pin\n");
+      //printf("Writing 0 to serial pin\n");
     }
 
     if (bits[i] == '1') {
       setPinUp(SHIFT_DATA);
-      printf("Writing 1 to serial pin\n");
+      //printf("Writing 1 to serial pin\n");
     }
 
     i++;
 
-    printf("Pulsing clock\n");
+    //printf("Pulsing clock\n");
     pulseClock();
   }
 
@@ -211,6 +219,8 @@ void pushAddrBits(char * bits) {
 }
 
 void pushDataBits(char * bits) {
+  printf("Pushing data bits: %s\n", bits);
+
   if (bits[0] == '0') {
     setPinLow(EEPROM_DATA_IO_0);
   } else {
@@ -256,7 +266,7 @@ void pushDataBits(char * bits) {
   return;
 }
 
-int shiftOutHex(char * hexData) {
+int shiftOutHexAddr(char * hexData) {
   char* binString = NULL;
 
   if (!hexToBin(hexData, &binString)) {
@@ -267,6 +277,21 @@ int shiftOutHex(char * hexData) {
   printf("Converted %s to binary as %s, pushing bits...\n", hexData, binString);
 
   pushAddrBits(binString);
+
+  return 0;
+}
+
+int shiftOutHexData(char * hexData) {
+  char* binString = NULL;
+
+  if (!hexToBin(hexData, &binString)) {
+    printf("Error converting hex to binary\n");
+    return 1;
+  }; 
+
+  printf("Converted %s to binary as %s, pushing bits...\n", hexData, binString);
+
+  pushDataBits(binString);
 
   return 0;
 }
@@ -329,53 +354,81 @@ int main() {
   initPinOutUp(SHIFT_DATA);
   initPinOutUp(SHIFT_CLK);
   initPinOutUp(SHIFT_LATCH);
-  initPinOutUp(EEPROM_WRITE_ENABLE);
-  setPinUp(EEPROM_WRITE_ENABLE);
+  initPinOutLow(EEPROM_WRITE_ENABLE);
+  initPinOutLow(EEPROM_DATA_IO_0);
+  initPinOutLow(EEPROM_DATA_IO_1);
+  initPinOutLow(EEPROM_DATA_IO_2);
+  initPinOutLow(EEPROM_DATA_IO_3);
+  initPinOutLow(EEPROM_DATA_IO_4);
+  initPinOutLow(EEPROM_DATA_IO_5);
+  initPinOutLow(EEPROM_DATA_IO_6);
 
-  //byte data[] = { 0x7e, 0x30, 0x6d, 0x79, 0x33, 0x5b, 0x5f, 0x70, 0x7f, 0x7b, 0x77, 0x1f, 0x4e, 0x3d, 0x4f, 0x47 };
-  //shiftOutHex(data[0]);
+  unsigned char data[] = { 0x7e, 0x30, 0x6d, 0x79, 0x33, 0x5b, 0x5f, 0x70, 0x7f, 0x7b, 0x77, 0x1f, 0x4e, 0x3d, 0x4f, 0x47 };
+  char *dataStrings[16];
+  dataStrings[0] = "0x73";
+  dataStrings[1] = "0x30";
+  dataStrings[2] = "0x6d";
+  dataStrings[3] = "0x79";
+  dataStrings[4] = "0x33";
+  dataStrings[5] = "0x5b";
+  dataStrings[6] = "0x5f";
+  dataStrings[7] = "0x70";
+  dataStrings[8] = "0x7f";
+  dataStrings[9] = "0x7b";
+  dataStrings[10] = "0x77";
+  dataStrings[11] = "0x1f";
+  dataStrings[12] = "0x4e";
+  dataStrings[13] = "0x3d";
+  dataStrings[14] = "0x4f";
+  dataStrings[15] = "0x47";
 
-  pushAddrBits("00000000001");
-  pulseLatch();
+  char *addrStrings[16];
+  addrStrings[0] = "00000000000";
+  addrStrings[1] = "00000000001";
+  addrStrings[2] = "00000000010";
+  addrStrings[3] = "00000000011";
+  addrStrings[4] = "00000000100";
+  addrStrings[5] = "00000000101";
+  addrStrings[6] = "00000000110";
+  addrStrings[7] = "00000000111";
+  addrStrings[8] = "00000001000";
+  addrStrings[9] = "00000001001";
+  addrStrings[10] = "00000001010";
+  addrStrings[11] = "00000001011";
+  addrStrings[12] = "00000001100";
+  addrStrings[13] = "00000001101";
+  addrStrings[14] = "00000001110";
+  addrStrings[15] = "00000001111";
 
-  setPinOff(EEPROM_DATA_IO_0);
-  setPinOff(EEPROM_DATA_IO_1);
-  setPinOff(EEPROM_DATA_IO_2);
-  setPinOff(EEPROM_DATA_IO_3);
-  setPinOff(EEPROM_DATA_IO_4);
-  setPinOff(EEPROM_DATA_IO_5);
-  setPinOff(EEPROM_DATA_IO_6);
+  int i;
 
-  setPinUp(EEPROM_DATA_IO_0);
-  setPinUp(EEPROM_DATA_IO_1);
+  for (i = 0; i < 255; i++) {
+    printf("Loop num: %i Hex: %02X Digits: %03d\n", i, data[i], data[i]);
+  
+    // Convert the counter into a binary address
+
+    // Push the binary address to the shift register
+    pushAddrBits(addrStrings[i]);
+    shiftOutHexData(dataStrings[i]);
+
+    // Convert the counter into binary data representing segments to be turned on
+    //pushDataBits(hex to bits here);
+    pulseLatch();
+    pulseWrite();
+    //sleep(1);
+  }
+
+  setPinLow(EEPROM_DATA_IO_0);
+  setPinLow(EEPROM_DATA_IO_1);
   setPinLow(EEPROM_DATA_IO_2);
-  setPinUp(EEPROM_DATA_IO_3);
-  setPinUp(EEPROM_DATA_IO_4);
-  setPinUp(EEPROM_DATA_IO_5);
+  setPinLow(EEPROM_DATA_IO_3);
+  setPinLow(EEPROM_DATA_IO_4);
+  setPinLow(EEPROM_DATA_IO_5);
   setPinLow(EEPROM_DATA_IO_6);
-
-  pulseWrite();
-
-  //for (int i = 0; i < 255; i++) {
-  //  char hex[5];
-  //  sprintf(hex, "%x", i);
-  //
-  //  shiftOutHex(hex);
-  //  pulseLatch();
-  //  pulseWrite();
-  //  sleep(1);
-  //}
+  setPinLow(EEPROM_DATA_IO_7);
 
   // Reset everything back to default
-  //gpio_reset();
-
-  setPinOff(EEPROM_DATA_IO_0);
-  setPinOff(EEPROM_DATA_IO_1);
-  setPinOff(EEPROM_DATA_IO_2);
-  setPinOff(EEPROM_DATA_IO_3);
-  setPinOff(EEPROM_DATA_IO_4);
-  setPinOff(EEPROM_DATA_IO_5);
-  setPinOff(EEPROM_DATA_IO_6);
+  gpio_reset();
 
   bcm2835_close();
 
